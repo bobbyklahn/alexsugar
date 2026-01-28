@@ -47,6 +47,12 @@ export async function initializeDatabase() {
       ON news_articles(published_at DESC)
     `;
 
+    // Add unique constraint on title to prevent duplicates
+    await sql`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_news_title_unique
+      ON news_articles(title)
+    `;
+
     // Create price_alerts table
     await sql`
       CREATE TABLE IF NOT EXISTS price_alerts (
@@ -215,6 +221,44 @@ export async function getArticleById(id: number) {
   return sql`
     SELECT * FROM news_articles
     WHERE id = ${id}
+  `;
+}
+
+export async function checkArticleExists(title: string) {
+  return sql`
+    SELECT id FROM news_articles
+    WHERE title = ${title}
+    LIMIT 1
+  `;
+}
+
+export async function saveNewsArticleBatch(article: {
+  title: string;
+  originalLanguage: string;
+  content?: string;
+  translatedContent?: string;
+  source: string;
+  sourceUrl: string;
+  category: string;
+  publishedAt: string;
+  imageUrl?: string;
+  isTranslated?: boolean;
+}) {
+  return sql`
+    INSERT INTO news_articles (title, original_language, content, translated_content, source, source_url, category, published_at, image_url, is_translated)
+    VALUES (${article.title}, ${article.originalLanguage}, ${article.content || null},
+            ${article.translatedContent || null}, ${article.source}, ${article.sourceUrl},
+            ${article.category}, ${article.publishedAt}, ${article.imageUrl || null},
+            ${article.isTranslated || false})
+    ON CONFLICT DO NOTHING
+    RETURNING *
+  `;
+}
+
+export async function getRecentArticleTitles() {
+  return sql`
+    SELECT title FROM news_articles
+    WHERE published_at > NOW() - INTERVAL '72 hours'
   `;
 }
 
