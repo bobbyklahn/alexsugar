@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="sugarGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#D4A574"/>
+      <stop offset="100%" style="stop-color:#C49A6C"/>
+    </linearGradient>
+  </defs>
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="256" fill="url(#sugarGradient)"/>
+  <!-- Sugar cube -->
+  <g transform="translate(128, 140)">
+    <!-- Cube face - top -->
+    <polygon points="128,32 256,96 128,160 0,96" fill="#FFFBF5" stroke="#3E2723" stroke-width="4"/>
+    <!-- Cube face - left -->
+    <polygon points="0,96 128,160 128,256 0,192" fill="#F5E6D3" stroke="#3E2723" stroke-width="4"/>
+    <!-- Cube face - right -->
+    <polygon points="256,96 128,160 128,256 256,192" fill="#E8D5C4" stroke="#3E2723" stroke-width="4"/>
+    <!-- Sugar sparkles -->
+    <circle cx="64" cy="72" r="6" fill="#FFD700" opacity="0.8"/>
+    <circle cx="160" cy="88" r="4" fill="#FFD700" opacity="0.7"/>
+    <circle cx="192" cy="56" r="5" fill="#FFD700" opacity="0.6"/>
+  </g>
+  <!-- Price trend arrow up -->
+  <g transform="translate(320, 340)">
+    <path d="M0,60 L30,0 L60,60 L40,60 L40,100 L20,100 L20,60 Z" fill="#81C784"/>
+  </g>
+</svg>
