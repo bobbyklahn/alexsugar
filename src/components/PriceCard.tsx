@@ -105,9 +105,9 @@ export default function PriceCard() {
           {/* Main price display */}
           <div className="mb-4">
             <div className="price-display text-4xl font-bold text-[var(--text-primary)] mb-1">
-              ${priceData.price.toFixed(4)}
+              {priceData.price.toFixed(2)}
               <span className="text-lg font-normal text-[var(--text-secondary)] ml-1">
-                /磅
+                美分/磅
               </span>
             </div>
             <div
@@ -121,7 +121,7 @@ export default function PriceCard() {
                 {priceData.changePercent24h.toFixed(2)}%
               </span>
               <span className="text-sm">
-                ({isPositive ? '+' : ''}${priceData.change24h.toFixed(4)})
+                ({isPositive ? '+' : ''}{priceData.change24h.toFixed(3)})
               </span>
             </div>
           </div>
@@ -133,7 +133,7 @@ export default function PriceCard() {
                 24小时最高
               </div>
               <div className="price-display font-semibold text-[var(--success)]">
-                ${priceData.high24h.toFixed(4)}
+                {priceData.high24h.toFixed(2)}
               </div>
             </div>
             <div>
@@ -141,7 +141,7 @@ export default function PriceCard() {
                 24小时最低
               </div>
               <div className="price-display font-semibold text-[var(--danger)]">
-                ${priceData.low24h.toFixed(4)}
+                {priceData.low24h.toFixed(2)}
               </div>
             </div>
           </div>

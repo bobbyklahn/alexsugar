@@ -82,8 +82,8 @@ export default function PriceChart() {
     if (data.length === 0) return;
 
     const csvContent = [
-      ['日期', '收盘价'].join(','),
-      ...data.map((item) => [item.formattedDate, item.close.toFixed(4)].join(',')),
+      ['日期', '收盘价(美分/磅)'].join(','),
+      ...data.map((item) => [item.formattedDate, item.close.toFixed(2)].join(',')),
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -109,7 +109,7 @@ export default function PriceChart() {
         <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-lg p-3 shadow-lg">
           <p className="text-sm text-[var(--text-secondary)]">{label}</p>
           <p className="text-lg font-semibold price-display">
-            ${payload[0].value.toFixed(4)}
+            {payload[0].value.toFixed(2)} 美分/磅
           </p>
         </div>
       );
@@ -173,8 +173,8 @@ export default function PriceChart() {
                 tick={{ fontSize: 12, fill: 'var(--text-secondary)' }}
                 tickLine={false}
                 axisLine={{ stroke: 'var(--card-border)' }}
-                tickFormatter={(value) => `$${value.toFixed(2)}`}
-                width={60}
+                tickFormatter={(value) => `${value.toFixed(1)}¢`}
+                width={50}
               />
               <Tooltip content={<CustomTooltip />} />
               <Line

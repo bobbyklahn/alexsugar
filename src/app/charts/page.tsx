@@ -151,7 +151,7 @@ export default function ChartsPage() {
               {p.dataKey === 'close' && '收盘价: '}
               {p.dataKey === 'ma20' && 'MA20: '}
               {p.dataKey === 'ma50' && 'MA50: '}
-              ${p.value?.toFixed(4) || '-'}
+              {p.value?.toFixed(2) || '-'}¢
             </p>
           ))}
         </div>
@@ -228,8 +228,8 @@ export default function ChartsPage() {
                     tick={{ fontSize: 11, fill: 'var(--text-secondary)' }}
                     tickLine={false}
                     axisLine={{ stroke: 'var(--card-border)' }}
-                    tickFormatter={(value) => `$${value.toFixed(2)}`}
-                    width={55}
+                    tickFormatter={(value) => `${value.toFixed(1)}¢`}
+                    width={45}
                   />
                   <Tooltip content={<CustomTooltip />} />
                   {stats && (
@@ -306,25 +306,25 @@ export default function ChartsPage() {
               <div>
                 <div className="text-xs text-[var(--text-secondary)]">最高价</div>
                 <div className="price-display font-semibold text-[var(--success)]">
-                  ${stats.high.toFixed(4)}
+                  {stats.high.toFixed(2)}¢
                 </div>
               </div>
               <div>
                 <div className="text-xs text-[var(--text-secondary)]">最低价</div>
                 <div className="price-display font-semibold text-[var(--danger)]">
-                  ${stats.low.toFixed(4)}
+                  {stats.low.toFixed(2)}¢
                 </div>
               </div>
               <div>
                 <div className="text-xs text-[var(--text-secondary)]">平均价</div>
                 <div className="price-display font-semibold">
-                  ${stats.average.toFixed(4)}
+                  {stats.average.toFixed(2)}¢
                 </div>
               </div>
               <div>
                 <div className="text-xs text-[var(--text-secondary)]">波动幅度</div>
                 <div className="price-display font-semibold">
-                  ${(stats.high - stats.low).toFixed(4)}
+                  {(stats.high - stats.low).toFixed(2)}¢
                 </div>
               </div>
             </div>

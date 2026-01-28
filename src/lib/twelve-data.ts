@@ -96,9 +96,9 @@ async function fetchYahooPrice(): Promise<{
     const result = data.chart.result[0];
     const meta = result.meta;
 
-    // Price is in cents, convert to dollars per pound
-    const currentPrice = meta.regularMarketPrice / 100;
-    const previousClose = (meta.previousClose || meta.chartPreviousClose || meta.regularMarketPrice) / 100;
+    // Price is in cents per pound (industry standard)
+    const currentPrice = meta.regularMarketPrice;
+    const previousClose = meta.previousClose || meta.chartPreviousClose || meta.regularMarketPrice;
     const change = currentPrice - previousClose;
     const changePercent = (change / previousClose) * 100;
 
@@ -106,8 +106,8 @@ async function fetchYahooPrice(): Promise<{
       price: currentPrice,
       change: change,
       changePercent: changePercent,
-      high: meta.regularMarketDayHigh / 100,
-      low: meta.regularMarketDayLow / 100,
+      high: meta.regularMarketDayHigh,
+      low: meta.regularMarketDayLow,
       timestamp: new Date(meta.regularMarketTime * 1000).toISOString(),
     };
   } catch (error) {
@@ -157,13 +157,13 @@ async function fetchYahooHistory(range: TimeRange): Promise<Array<{
       return null;
     }
 
-    // Convert to our format, prices are in cents so divide by 100
+    // Keep prices in cents per pound (industry standard)
     return timestamps.map((ts, i) => ({
       timestamp: new Date(ts * 1000).toISOString(),
-      open: (quote.open[i] || 0) / 100,
-      high: (quote.high[i] || 0) / 100,
-      low: (quote.low[i] || 0) / 100,
-      close: (quote.close[i] || 0) / 100,
+      open: quote.open[i] || 0,
+      high: quote.high[i] || 0,
+      low: quote.low[i] || 0,
+      close: quote.close[i] || 0,
       volume: quote.volume[i],
     })).filter(d => d.close > 0); // Filter out invalid data points
   } catch (error) {
@@ -178,27 +178,27 @@ export async function getPriceWithFallback() {
 
   if (realPrice) {
     return {
-      price: parseFloat(realPrice.price.toFixed(4)),
-      change24h: parseFloat(realPrice.change.toFixed(4)),
+      price: parseFloat(realPrice.price.toFixed(2)),
+      change24h: parseFloat(realPrice.change.toFixed(3)),
       changePercent24h: parseFloat(realPrice.changePercent.toFixed(2)),
-      high24h: parseFloat(realPrice.high.toFixed(4)),
-      low24h: parseFloat(realPrice.low.toFixed(4)),
+      high24h: parseFloat(realPrice.high.toFixed(2)),
+      low24h: parseFloat(realPrice.low.toFixed(2)),
       timestamp: realPrice.timestamp,
       source: 'yahoo_finance',
     };
   }
 
-  // Fallback mock data if API fails
-  const mockPrice = 0.1485 + (Math.random() - 0.5) * 0.01;
-  const mockChange = (Math.random() - 0.5) * 0.005;
+  // Fallback mock data if API fails (prices in cents per pound)
+  const mockPrice = 14.85 + (Math.random() - 0.5) * 1.0;
+  const mockChange = (Math.random() - 0.5) * 0.5;
   const mockChangePercent = (mockChange / mockPrice) * 100;
 
   return {
-    price: parseFloat(mockPrice.toFixed(4)),
-    change24h: parseFloat(mockChange.toFixed(4)),
+    price: parseFloat(mockPrice.toFixed(2)),
+    change24h: parseFloat(mockChange.toFixed(3)),
     changePercent24h: parseFloat(mockChangePercent.toFixed(2)),
-    high24h: parseFloat((mockPrice + 0.003).toFixed(4)),
-    low24h: parseFloat((mockPrice - 0.003).toFixed(4)),
+    high24h: parseFloat((mockPrice + 0.3).toFixed(2)),
+    low24h: parseFloat((mockPrice - 0.3).toFixed(2)),
     timestamp: new Date().toISOString(),
     source: 'mock',
   };
@@ -216,12 +216,12 @@ export async function getHistoricalWithFallback(range: TimeRange) {
     };
   }
 
-  // Generate mock historical data as fallback
+  // Generate mock historical data as fallback (prices in cents per pound)
   const config = getYahooConfig(range);
   const outputSize = range === '1d' ? 96 : range === '1w' ? 120 : range === '1m' ? 30 : range === '3m' ? 90 : range === '1y' ? 252 : range === '2y' ? 104 : 260;
 
   const mockData = [];
-  let basePrice = 0.1485;
+  let basePrice = 14.85; // cents per pound
   const now = new Date();
 
   for (let i = outputSize - 1; i >= 0; i--) {
@@ -237,20 +237,20 @@ export async function getHistoricalWithFallback(range: TimeRange) {
       date.setDate(date.getDate() - i * 7);
     }
 
-    const change = (Math.random() - 0.5) * 0.005;
-    basePrice = Math.max(0.10, Math.min(0.20, basePrice + change));
+    const change = (Math.random() - 0.5) * 0.5;
+    basePrice = Math.max(10, Math.min(25, basePrice + change));
 
     const open = basePrice;
-    const close = basePrice + (Math.random() - 0.5) * 0.003;
-    const high = Math.max(open, close) + Math.random() * 0.002;
-    const low = Math.min(open, close) - Math.random() * 0.002;
+    const close = basePrice + (Math.random() - 0.5) * 0.3;
+    const high = Math.max(open, close) + Math.random() * 0.2;
+    const low = Math.min(open, close) - Math.random() * 0.2;
 
     mockData.push({
       timestamp: date.toISOString(),
-      open: parseFloat(open.toFixed(4)),
-      high: parseFloat(high.toFixed(4)),
-      low: parseFloat(low.toFixed(4)),
-      close: parseFloat(close.toFixed(4)),
+      open: parseFloat(open.toFixed(2)),
+      high: parseFloat(high.toFixed(2)),
+      low: parseFloat(low.toFixed(2)),
+      close: parseFloat(close.toFixed(2)),
     });
   }
 
