@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import { NewsArticle } from '@/types';
@@ -11,6 +12,7 @@ interface NewsCardProps {
 }
 
 export default function NewsCard({ article, compact = false }: NewsCardProps) {
+  const router = useRouter();
   const [translating, setTranslating] = useState(false);
   const [translatedContent, setTranslatedContent] = useState(
     article.translatedContent
@@ -19,7 +21,13 @@ export default function NewsCard({ article, compact = false }: NewsCardProps) {
     article.isTranslated || article.originalLanguage === 'zh'
   );
 
-  const handleTranslate = async () => {
+  const handleCardClick = () => {
+    router.push(`/news/${article.id}`);
+  };
+
+  const handleTranslate = async (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card navigation
+
     if (translatedContent || article.originalLanguage === 'zh') {
       setShowTranslation(!showTranslation);
       return;
@@ -60,7 +68,10 @@ export default function NewsCard({ article, compact = false }: NewsCardProps) {
     : article.content;
 
   return (
-    <div className="card p-4">
+    <div
+      className="card p-4 cursor-pointer hover:shadow-md transition-shadow active:scale-[0.99]"
+      onClick={handleCardClick}
+    >
       <div className="flex gap-3">
         {/* Thumbnail placeholder */}
         {article.imageUrl && !compact && (
@@ -130,6 +141,22 @@ export default function NewsCard({ article, compact = false }: NewsCardProps) {
                 )}
               </button>
             )}
+
+            {/* Arrow indicator */}
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="w-4 h-4 ml-auto text-[var(--text-secondary)] opacity-50"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="m8.25 4.5 7.5 7.5-7.5 7.5"
+              />
+            </svg>
           </div>
         </div>
       </div>
