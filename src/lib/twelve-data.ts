@@ -1,115 +1,194 @@
-import { TwelveDataQuote, TwelveDataTimeSeries, TimeRange } from '@/types';
+import { TimeRange } from '@/types';
 
-const API_KEY = process.env.TWELVE_DATA_API_KEY;
-const BASE_URL = 'https://api.twelvedata.com';
-
-// Sugar futures symbol - using SUGAR commodity
-const SUGAR_SYMBOL = 'SUGAR';
+// Yahoo Finance Sugar Futures symbol
+const SUGAR_SYMBOL = 'SB=F';
+const YAHOO_BASE_URL = 'https://query1.finance.yahoo.com/v8/finance/chart';
 
 interface IntervalConfig {
   interval: string;
-  outputSize: number;
+  range: string;
 }
 
-// Map time range to API interval and output size
-function getIntervalConfig(range: TimeRange): IntervalConfig {
+// Map time range to Yahoo Finance parameters
+function getYahooConfig(range: TimeRange): IntervalConfig {
   switch (range) {
     case '1d':
-      return { interval: '15min', outputSize: 96 }; // 24 hours of 15-min data
+      return { interval: '15m', range: '1d' };
     case '1w':
-      return { interval: '1h', outputSize: 168 }; // 7 days of hourly data
+      return { interval: '1h', range: '5d' };
     case '1m':
-      return { interval: '1day', outputSize: 30 };
+      return { interval: '1d', range: '1mo' };
     case '3m':
-      return { interval: '1day', outputSize: 90 };
+      return { interval: '1d', range: '3mo' };
     case '1y':
-      return { interval: '1day', outputSize: 365 };
+      return { interval: '1d', range: '1y' };
     case '2y':
-      return { interval: '1week', outputSize: 104 };
+      return { interval: '1wk', range: '2y' };
     case '5y':
-      return { interval: '1week', outputSize: 260 };
+      return { interval: '1wk', range: '5y' };
     default:
-      return { interval: '1day', outputSize: 365 };
+      return { interval: '1d', range: '1y' };
   }
 }
 
-// Fetch current sugar price quote
-export async function getCurrentPrice(): Promise<TwelveDataQuote | null> {
+interface YahooQuote {
+  high: number[];
+  low: number[];
+  open: number[];
+  close: number[];
+  volume: number[];
+}
+
+interface YahooMeta {
+  regularMarketPrice: number;
+  previousClose?: number;
+  chartPreviousClose?: number;
+  regularMarketDayHigh: number;
+  regularMarketDayLow: number;
+  regularMarketTime: number;
+}
+
+interface YahooResponse {
+  chart: {
+    result: Array<{
+      meta: YahooMeta;
+      timestamp: number[];
+      indicators: {
+        quote: YahooQuote[];
+      };
+    }>;
+    error: null | { code: string; description: string };
+  };
+}
+
+// Fetch current sugar price from Yahoo Finance
+async function fetchYahooPrice(): Promise<{
+  price: number;
+  change: number;
+  changePercent: number;
+  high: number;
+  low: number;
+  timestamp: string;
+} | null> {
   try {
     const response = await fetch(
-      `${BASE_URL}/quote?symbol=${SUGAR_SYMBOL}&apikey=${API_KEY}`,
-      { next: { revalidate: 300 } } // Cache for 5 minutes
+      `${YAHOO_BASE_URL}/${SUGAR_SYMBOL}?interval=1d&range=2d`,
+      {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+        },
+        next: { revalidate: 300 }, // Cache for 5 minutes
+      }
     );
 
     if (!response.ok) {
-      console.error('Twelve Data API error:', response.status);
+      console.error('Yahoo Finance API error:', response.status);
       return null;
     }
 
-    const data = await response.json();
+    const data: YahooResponse = await response.json();
 
-    if (data.code) {
-      // API error response
-      console.error('Twelve Data API error:', data.message);
+    if (data.chart.error || !data.chart.result?.[0]) {
+      console.error('Yahoo Finance API error:', data.chart.error);
       return null;
     }
 
-    return data as TwelveDataQuote;
+    const result = data.chart.result[0];
+    const meta = result.meta;
+
+    // Price is in cents, convert to dollars per pound
+    const currentPrice = meta.regularMarketPrice / 100;
+    const previousClose = (meta.previousClose || meta.chartPreviousClose || meta.regularMarketPrice) / 100;
+    const change = currentPrice - previousClose;
+    const changePercent = (change / previousClose) * 100;
+
+    return {
+      price: currentPrice,
+      change: change,
+      changePercent: changePercent,
+      high: meta.regularMarketDayHigh / 100,
+      low: meta.regularMarketDayLow / 100,
+      timestamp: new Date(meta.regularMarketTime * 1000).toISOString(),
+    };
   } catch (error) {
-    console.error('Error fetching current price:', error);
+    console.error('Error fetching Yahoo Finance price:', error);
     return null;
   }
 }
 
-// Fetch historical price data
-export async function getHistoricalPrices(
-  range: TimeRange
-): Promise<TwelveDataTimeSeries | null> {
+// Fetch historical prices from Yahoo Finance
+async function fetchYahooHistory(range: TimeRange): Promise<Array<{
+  timestamp: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume?: number;
+}> | null> {
   try {
-    const { interval, outputSize } = getIntervalConfig(range);
-
+    const config = getYahooConfig(range);
     const response = await fetch(
-      `${BASE_URL}/time_series?symbol=${SUGAR_SYMBOL}&interval=${interval}&outputsize=${outputSize}&apikey=${API_KEY}`,
-      { next: { revalidate: 300 } } // Cache for 5 minutes
+      `${YAHOO_BASE_URL}/${SUGAR_SYMBOL}?interval=${config.interval}&range=${config.range}`,
+      {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+        },
+        next: { revalidate: 300 },
+      }
     );
 
     if (!response.ok) {
-      console.error('Twelve Data API error:', response.status);
+      console.error('Yahoo Finance API error:', response.status);
       return null;
     }
 
-    const data = await response.json();
+    const data: YahooResponse = await response.json();
 
-    if (data.code) {
-      // API error response
-      console.error('Twelve Data API error:', data.message);
+    if (data.chart.error || !data.chart.result?.[0]) {
+      console.error('Yahoo Finance API error:', data.chart.error);
       return null;
     }
 
-    return data as TwelveDataTimeSeries;
+    const result = data.chart.result[0];
+    const timestamps = result.timestamp;
+    const quote = result.indicators.quote[0];
+
+    if (!timestamps || !quote) {
+      return null;
+    }
+
+    // Convert to our format, prices are in cents so divide by 100
+    return timestamps.map((ts, i) => ({
+      timestamp: new Date(ts * 1000).toISOString(),
+      open: (quote.open[i] || 0) / 100,
+      high: (quote.high[i] || 0) / 100,
+      low: (quote.low[i] || 0) / 100,
+      close: (quote.close[i] || 0) / 100,
+      volume: quote.volume[i],
+    })).filter(d => d.close > 0); // Filter out invalid data points
   } catch (error) {
-    console.error('Error fetching historical prices:', error);
+    console.error('Error fetching Yahoo Finance history:', error);
     return null;
   }
 }
 
-// Get real-time price with fallback to mock data for development
+// Get real-time price with fallback to mock data
 export async function getPriceWithFallback() {
-  const realPrice = await getCurrentPrice();
+  const realPrice = await fetchYahooPrice();
 
   if (realPrice) {
     return {
-      price: parseFloat(realPrice.close),
-      change24h: parseFloat(realPrice.change),
-      changePercent24h: parseFloat(realPrice.percent_change),
-      high24h: parseFloat(realPrice.high),
-      low24h: parseFloat(realPrice.low),
-      timestamp: realPrice.datetime,
-      source: 'twelve_data',
+      price: parseFloat(realPrice.price.toFixed(4)),
+      change24h: parseFloat(realPrice.change.toFixed(4)),
+      changePercent24h: parseFloat(realPrice.changePercent.toFixed(2)),
+      high24h: parseFloat(realPrice.high.toFixed(4)),
+      low24h: parseFloat(realPrice.low.toFixed(4)),
+      timestamp: realPrice.timestamp,
+      source: 'yahoo_finance',
     };
   }
 
-  // Fallback mock data for development/demo
+  // Fallback mock data if API fails
   const mockPrice = 0.1485 + (Math.random() - 0.5) * 0.01;
   const mockChange = (Math.random() - 0.5) * 0.005;
   const mockChangePercent = (mockChange / mockPrice) * 100;
@@ -127,25 +206,20 @@ export async function getPriceWithFallback() {
 
 // Get historical data with fallback to mock data
 export async function getHistoricalWithFallback(range: TimeRange) {
-  const realData = await getHistoricalPrices(range);
+  const realData = await fetchYahooHistory(range);
 
-  if (realData && realData.values) {
+  if (realData && realData.length > 0) {
     return {
-      data: realData.values.map((v) => ({
-        timestamp: v.datetime,
-        open: parseFloat(v.open),
-        high: parseFloat(v.high),
-        low: parseFloat(v.low),
-        close: parseFloat(v.close),
-        volume: v.volume ? parseInt(v.volume) : undefined,
-      })),
+      data: realData,
       range,
-      interval: realData.meta.interval,
+      interval: getYahooConfig(range).interval,
     };
   }
 
-  // Generate mock historical data
-  const { outputSize } = getIntervalConfig(range);
+  // Generate mock historical data as fallback
+  const config = getYahooConfig(range);
+  const outputSize = range === '1d' ? 96 : range === '1w' ? 120 : range === '1m' ? 30 : range === '3m' ? 90 : range === '1y' ? 252 : range === '2y' ? 104 : 260;
+
   const mockData = [];
   let basePrice = 0.1485;
   const now = new Date();
@@ -153,7 +227,6 @@ export async function getHistoricalWithFallback(range: TimeRange) {
   for (let i = outputSize - 1; i >= 0; i--) {
     const date = new Date(now);
 
-    // Adjust date based on range
     if (range === '1d') {
       date.setMinutes(date.getMinutes() - i * 15);
     } else if (range === '1w') {
@@ -164,7 +237,6 @@ export async function getHistoricalWithFallback(range: TimeRange) {
       date.setDate(date.getDate() - i * 7);
     }
 
-    // Random walk for price
     const change = (Math.random() - 0.5) * 0.005;
     basePrice = Math.max(0.10, Math.min(0.20, basePrice + change));
 
@@ -185,6 +257,6 @@ export async function getHistoricalWithFallback(range: TimeRange) {
   return {
     data: mockData,
     range,
-    interval: getIntervalConfig(range).interval,
+    interval: config.interval,
   };
 }
