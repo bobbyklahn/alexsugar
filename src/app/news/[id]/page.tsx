@@ -19,19 +19,14 @@ export default function NewsDetailPage() {
   useEffect(() => {
     const fetchArticle = async () => {
       try {
-        // Fetch article from the news API
-        const response = await fetch('/api/news');
+        const response = await fetch(`/api/news?id=${params.id}`);
         const data = await response.json();
 
-        if (data.success) {
-          const found = data.data.articles.find(
-            (a: NewsArticle) => a.id === Number(params.id)
-          );
-          if (found) {
-            setArticle(found);
-            setTranslatedContent(found.translatedContent);
-            setShowTranslation(found.isTranslated || found.originalLanguage === 'zh');
-          }
+        if (data.success && data.data.article) {
+          const found: NewsArticle = data.data.article;
+          setArticle(found);
+          setTranslatedContent(found.translatedContent);
+          setShowTranslation(found.isTranslated || found.originalLanguage === 'zh');
         }
       } catch (error) {
         console.error('Error fetching article:', error);
